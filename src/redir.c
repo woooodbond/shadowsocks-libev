@@ -752,8 +752,13 @@ accept_cb(EV_P_ ev_io *w, int revents)
     setnonblocking(remotefd);
 
     if (listener->tos >= 0) {
-        if (setsockopt(remotefd, IPPROTO_IP, IP_TOS, &listener->tos, sizeof(listener->tos)) != 0) {
-            ERROR("setsockopt IP_TOS");
+        int rc = setsockopt(remotefd, IPPROTO_IP, IP_TOS, &listener->tos, sizeof(listener->tos));
+        if (rc < 0 && errno != ENOPROTOOPT) {
+            LOGE("setting ipv4 dscp failed: %d", errno);
+        }
+        rc = setsockopt(remotefd, IPPROTO_IPV6, IPV6_TCLASS, &listener->tos, sizeof(listener->tos));
+        if (rc < 0 && errno != ENOPROTOOPT) {
+            LOGE("setting ipv6 dscp failed: %d", errno);
         }
     }
 
@@ -1074,7 +1079,7 @@ main(int argc, char **argv)
     }
 
     if (method == NULL) {
-        method = "rc4-md5";
+        method = "chacha20-ietf-poly1305";
     }
 
     if (timeout == NULL) {
